@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 #define PI 3.1415926535
 #define EPS 1e-9
 
@@ -141,6 +142,47 @@ Result giai(int n, int dc, int dg, int ld, int uuTienChung) {
     return taoKQ(bc, bg, riceRemain);
 }
 
+Result giaiWind(int n, int dc, int dg, int ld) {
+    double riceC = nepBanhChung(dc);
+    double riceG = nepBanhGiay(dg);
+
+    int laC = laBanhChung(dc);
+    int laG = laBanhGiay(dg);
+
+    int maxBc = maxTheoTaiNguyen(n, riceC, ld, laC);
+    int maxBg = maxTheoTaiNguyen(n, riceG, ld, laG);
+
+    int bestBc = 0;
+    int bestBg = 0;
+
+    double bestLeft = n;
+
+    for (int bc = 0; bc <= maxBc; bc++) {
+        for (int bg = 0; bg <= maxBg; bg++) {
+
+            int usedLeaves = bc * laC + bg * laG;
+            if (usedLeaves > ld) continue;
+
+            double usedRice = bc * riceC + bg * riceG;
+            if (usedRice > n + EPS) continue;
+
+            double left = n - usedRice;
+
+            if (left < bestLeft - EPS ||
+               (fabs(left - bestLeft) <= EPS && bg > bestBg) ||
+               (fabs(left - bestLeft) <= EPS &&
+                bg == bestBg && bc > bestBc)) {
+
+                bestBc = bc;
+                bestBg = bg;
+                bestLeft = left;
+            }
+        }
+    }
+
+    return taoKQ(bestBc, bestBg, bestLeft);
+}
+
 Result giaiRain(int n, int dc, int dg, int ld) {
     double riceC = nepBanhChung(dc);
     double riceG = nepBanhGiay(dg);
@@ -154,27 +196,29 @@ Result giaiRain(int n, int dc, int dg, int ld) {
     double bestLeft = n;
 
     for (int bc = 0; bc <= maxBc; bc++)
-    for (int bg = 0; bg <= maxBg; bg++) {
-        int usedLeaves = bc*laC + bg*laG;
-        if (usedLeaves > ld) continue;
+        for (int bg = 0; bg <= maxBg; bg++) {
+            int usedLeaves = bc*laC + bg*laG;
+            if (usedLeaves > ld) continue;
 
-        double usedRice = bc*riceC + bg*riceG;
-        if (usedRice > n + EPS) continue;
+            double usedRice = bc*riceC + bg*riceG;
+            if (usedRice > n + EPS) continue;
 
-        double left = n - usedRice;
-        int diff = abs(bc - bg);
+            double left = n - usedRice;
+            int diff = abs(bc - bg);
 
-        if (left < bestLeft - EPS ||
-           (fabs(left - bestLeft) <= EPS && diff < bestDiff) ||
-           (fabs(left - bestLeft) <= EPS && diff == bestDiff && bc+bg > bestBc+bestBg) ||
-           (fabs(left - bestLeft) <= EPS && diff == bestDiff && bc+bg == bestBc+bestBg && bc > bestBc)) {
-            bestBc = bc;
-            bestBg = bg;
-            bestDiff = diff;
-            bestLeft = left;
+                if (diff < bestDiff ||
+                    (diff == bestDiff && left < bestLeft - EPS) ||
+                    (diff == bestDiff && fabs(left - bestLeft) <= EPS &&
+                    bc + bg > bestBc + bestBg) ||
+                    (diff == bestDiff && fabs(left - bestLeft) <= EPS &&
+                    bc + bg == bestBc + bestBg && bc > bestBc)) {
+
+                    bestBc = bc;
+                    bestBg = bg;
+                    bestDiff = diff;
+                    bestLeft = left;
+            }
         }
-    }
-
     return taoKQ(bestBc, bestBg, bestLeft);
 }
 
@@ -211,7 +255,7 @@ int bonusSun(int dc, int ld) {
 }
 
 Result giaiTheoThoiTiet(int n, int dc, int dg, int ld, const char *weather) {
-    if (strcmp(weather,"Wind")==0) return giai(n,dc,dg,ld,1);
+    if (strcmp(weather,"Wind")==0) return giaiWind(n,dc,dg,ld);
     if (strcmp(weather,"Rain")==0) return giaiRain(n,dc,dg,ld);
 
     if (strcmp(weather,"Cloud")==0) {
@@ -223,7 +267,7 @@ Result giaiTheoThoiTiet(int n, int dc, int dg, int ld, const char *weather) {
 
     if (strcmp(weather,"Sun")==0) {
         int bonus = bonusSun(dc,ld);
-        int newN  = n + llround(n*bonus/100.0);
+        int newN = n + (int)(n * bonus / 100.0);
         int newLd = ld - bonus;
 
         char newWeather[10];
