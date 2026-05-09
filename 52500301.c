@@ -206,11 +206,11 @@ Result giaiRain(int n, int dc, int dg, int ld) {
             double left = n - usedRice;
             int diff = abs(bc - bg);
 
-                if (diff < bestDiff ||
-                    (diff == bestDiff && left < bestLeft - EPS) ||
-                    (diff == bestDiff && fabs(left - bestLeft) <= EPS &&
+                if (left < bestLeft - EPS ||
+                    (fabs(left - bestLeft) <= EPS && diff < bestDiff) ||
+                    (fabs(left - bestLeft) <= EPS && diff == bestDiff &&
                     bc + bg > bestBc + bestBg) ||
-                    (diff == bestDiff && fabs(left - bestLeft) <= EPS &&
+                    (fabs(left - bestLeft) <= EPS && diff == bestDiff &&
                     bc + bg == bestBc + bestBg && bc > bestBc)) {
 
                     bestBc = bc;
