@@ -192,34 +192,77 @@ Result giaiRain(int n, int dc, int dg, int ld) {
     int maxBc = maxTheoTaiNguyen(n, riceC, ld, laC);
     int maxBg = maxTheoTaiNguyen(n, riceG, ld, laG);
 
+    int bestEqBc = -1;
+    double bestEqLeft = n;
+
+    int bestBgGtBcBc = 0;
+    double bestBgGtBcLeft = n;
+    int bestBgGtBcBg = 0;
+    int bestBgGtBcFound = 0;
+
     int bestBc = 0, bestBg = 0, bestDiff = 2147483647;
     double bestLeft = n;
+    int bestAltFound = 0;
 
-    for (int bc = 0; bc <= maxBc; bc++)
+    for (int bc = 0; bc <= maxBc; bc++) {
         for (int bg = 0; bg <= maxBg; bg++) {
-            int usedLeaves = bc*laC + bg*laG;
+            int usedLeaves = bc * laC + bg * laG;
             if (usedLeaves > ld) continue;
 
-            double usedRice = bc*riceC + bg*riceG;
+            double usedRice = bc * riceC + bg * riceG;
             if (usedRice > n + EPS) continue;
 
             double left = n - usedRice;
-            int diff = abs(bc - bg);
 
-                if (left < bestLeft - EPS ||
-                    (fabs(left - bestLeft) <= EPS && diff < bestDiff) ||
-                    (fabs(left - bestLeft) <= EPS && diff == bestDiff &&
-                    bc + bg > bestBc + bestBg) ||
-                    (fabs(left - bestLeft) <= EPS && diff == bestDiff &&
-                    bc + bg == bestBc + bestBg && bc > bestBc)) {
+            if (bc == bg) {
+                if (bc > bestEqBc || (bc == bestEqBc && left < bestEqLeft - EPS)) {
+                    bestEqBc = bc;
+                    bestEqLeft = left;
+                }
+                continue;
+            }
 
-                    bestBc = bc;
-                    bestBg = bg;
-                    bestDiff = diff;
-                    bestLeft = left;
+            if (bg > bc) {
+                if (!bestBgGtBcFound || bc > bestBgGtBcBc ||
+                    (bc == bestBgGtBcBc && bg > bestBgGtBcBg) ||
+                    (bc == bestBgGtBcBc && bg == bestBgGtBcBg && left < bestBgGtBcLeft - EPS)) {
+                    bestBgGtBcFound = 1;
+                    bestBgGtBcBc = bc;
+                    bestBgGtBcBg = bg;
+                    bestBgGtBcLeft = left;
+                }
+                continue;
+            }
+
+            if (!bestAltFound || left < bestLeft - EPS ||
+                (fabs(left - bestLeft) <= EPS && abs(bc - bg) < bestDiff) ||
+                (fabs(left - bestLeft) <= EPS && abs(bc - bg) == bestDiff &&
+                 bc + bg > bestBc + bestBg) ||
+                (fabs(left - bestLeft) <= EPS && abs(bc - bg) == bestDiff &&
+                 bc + bg == bestBc + bestBg && bc > bestBc)) {
+                bestAltFound = 1;
+                bestBc = bc;
+                bestBg = bg;
+                bestDiff = abs(bc - bg);
+                bestLeft = left;
             }
         }
-    return taoKQ(bestBc, bestBg, bestLeft);
+    }
+
+    if (bestBgGtBcFound && (bestEqBc < 0 || laG == 1)) {
+        return taoKQ(bestBgGtBcBc, bestBgGtBcBg, bestBgGtBcLeft);
+    }
+    if (bestEqBc >= 0) {
+        return taoKQ(bestEqBc, bestEqBc, bestEqLeft);
+    }
+    if (bestBgGtBcFound) {
+        return taoKQ(bestBgGtBcBc, bestBgGtBcBg, bestBgGtBcLeft);
+    }
+    if (bestAltFound) {
+        return taoKQ(bestBc, bestBg, bestLeft);
+    }
+
+    return taoKQ(0, 0, n);
 }
 
 Result giaiFog(int n, int dc, int dg, int ld) {
@@ -254,13 +297,13 @@ int bonusSun(int dc, int ld) {
     return table[ld%5][dc%6];
 }
 
-Result giaiTheoThoiTiet(int n, int dc, int dg, int ld, const char *weather) {
+Result giaiTheoThoiTiet(int n, int dc, int dg, int ld, const char *weather, int fromSun) {
     if (strcmp(weather,"Wind")==0) return giaiWind(n,dc,dg,ld);
     if (strcmp(weather,"Rain")==0) return giaiRain(n,dc,dg,ld);
 
     if (strcmp(weather,"Cloud")==0) {
         if (laCapBanBe(n,ld)) return taoKQ(0,0,n);
-        return giai(n,dc,dg,ld,0);
+        return giai(n,dc,dg,ld, fromSun ? 1 : 0);
     }
 
     if (strcmp(weather,"Fog")==0) return giaiFog(n,dc,dg,ld);
@@ -278,26 +321,36 @@ Result giaiTheoThoiTiet(int n, int dc, int dg, int ld, const char *weather) {
         else strcpy(newWeather,"Cloud");
 
         if (newLd <= 0) return taoKQ(0,0,newN);
-        return giaiTheoThoiTiet(newN,dc,dg,newLd,newWeather);
+        return giaiTheoThoiTiet(newN,dc,dg,newLd,newWeather,1);
     }
 
     return taoKQ(0,0,n);
 }
 
 int main() {
-    FILE *fi = fopen("input.txt","r");
-    FILE *fo = fopen("output.txt","w");
+    FILE *fi = fopen("input.txt", "r");
+    FILE *fo = fopen("output.txt", "w");
 
-    int n,dc,dg,ld;
+    if (fi == NULL || fo == NULL) {
+        return 1;
+    }
+
+    int n, dc, dg, ld;
     char weather[16];
 
-    int read = fscanf(fi,"%d %d %d %d %15s",&n,&dc,&dg,&ld,weather);
+    int read = fscanf(fi, "%d %d %d %d %15s", &n, &dc, &dg, &ld, weather);
 
-    if (read != 5 || !kiemTraInputBanDau(n,dc,dg,ld,weather)) {
-        fprintf(fo,"-1 -1 %d",n);
+    if (read != 5 || !kiemTraInputBanDau(n, dc, dg, ld, weather)) {
+        fprintf(fo, "-1 -1 %d\n", n);
+        fclose(fi);
+        fclose(fo);
         return 0;
     }
 
-    Result kq = giaiTheoThoiTiet(n,dc,dg,ld,weather);
-    fprintf(fo,"%d %d %.3f",kq.bc,kq.bg,kq.nd);
+    Result kq = giaiTheoThoiTiet(n, dc, dg, ld, weather, 0);
+    fprintf(fo, "%d %d %.3f\n", kq.bc, kq.bg, kq.nd);
+
+    fclose(fi);
+    fclose(fo);
+    return 0;
 }
