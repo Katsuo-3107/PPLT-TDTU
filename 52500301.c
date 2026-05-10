@@ -341,16 +341,16 @@ int main() {
     int read = fscanf(fi, "%d %d %d %d %15s", &n, &dc, &dg, &ld, weather);
 
     if (read != 5 || !kiemTraInputBanDau(n, dc, dg, ld, weather)) {
-        fprintf(fo, "-1 -1 %d\n", n);
+        fprintf(fo, "-1 -1 %d", n);
         fclose(fi);
         fclose(fo);
         return 0;
     }
 
     Result kq = giaiTheoThoiTiet(n, dc, dg, ld, weather, 0);
-    fprintf(fo, "%d %d %.3f\n", kq.bc, kq.bg, kq.nd);
-
+    fprintf(fo, "%d %d %.3f", kq.bc, kq.bg, kq.nd);
     fclose(fi);
     fclose(fo);
+
     return 0;
 }
